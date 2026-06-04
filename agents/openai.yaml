@@ -1,0 +1,7 @@
+interface:
+  display_name: "Jianying Template Video Remix"
+  short_description: "Remix Jianying templates into new styled drafts"
+  default_prompt: "Use $jianying-template-video-remix to create a same-style Jianying draft from my template, script or topic, and media folder."
+
+policy:
+  allow_implicit_invocation: true

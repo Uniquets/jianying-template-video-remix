@@ -1,0 +1,86 @@
+{
+  "schema": "jianying-template-video-remix.default-fallbacks.v1",
+  "name": "default_fallbacks",
+  "usage": "Bundled portable fallbacks. Paths are relative to the defaults/ directory. Run scripts/bootstrap_assets.py once per machine to populate defaults/assets/. Optional override: defaults/default_fallbacks.local.json (gitignored).",
+  "fallbacks": {
+    "popup_title": {
+      "default_style": "shadow_notice",
+      "styles": {
+        "shadow_notice": {
+          "transform": {
+            "x": 0.0,
+            "y": 0.7700283229351044,
+            "scale": 1.0,
+            "rotation": 0.0
+          },
+          "font_resource_id": "7080096967543493150",
+          "font_path": "assets/fonts/popup_title.ttf",
+          "font_size": 15,
+          "default_text_color": "#ffde00",
+          "default_fill_color_rgba": [1, 0.8705882430076599, 0],
+          "border_color": null,
+          "border_width": 0.08,
+          "has_shadow": true,
+          "shadow_alpha": 0.8999999761581421,
+          "shadow_color": "#000000",
+          "shadow_distance": 5.0,
+          "shadow_smoothing": 0.45000001788139343,
+          "background_style": null,
+          "background_color": null,
+          "background_alpha": null
+        }
+      },
+      "color_policy": {
+        "can_override_color": true,
+        "default_color": "#ffde00",
+        "allowed_named_colors": {
+          "yellow": "#ffde00",
+          "red": "#fe5252",
+          "pink": "#ff287f",
+          "green": "#00e676",
+          "beige": "#e9d7a4",
+          "white": "#ffffff"
+        },
+        "note": "Change only text/fill color unless the user asks for a new popup layout."
+      }
+    },
+    "subtitle": {
+      "font_resource_id": "6740435892441190919",
+      "font_path": "assets/fonts/subtitle.ttf",
+      "font_size": 9.0,
+      "text_color": "#ffffff",
+      "background_style": 1,
+      "background_color": "#000000",
+      "background_alpha": 0.15792442188381262,
+      "background_width": 0.0,
+      "background_height": 0.0,
+      "has_shadow": true,
+      "shadow_alpha": 0.8999999761581421,
+      "shadow_color": "#000000",
+      "shadow_distance": 5.0,
+      "shadow_smoothing": 0.45000001788139343,
+      "border_width": 0.08,
+      "line_spacing": 0.02,
+      "transform": {
+        "x": 0.0,
+        "y": -0.8507462686567167
+      }
+    },
+    "bgm": {
+      "path": "assets/bgm/fallback_bgm.mp3",
+      "name": "Fallback BGM",
+      "music_id": "",
+      "category_id": "",
+      "duration": 0
+    },
+    "tts": {
+      "default_voice": {
+        "tone_speaker": "zh_female_mizai_saturn_bigtts",
+        "tone_platform": "sami",
+        "resource_id": "7516816955475512615",
+        "tone_type": "default",
+        "tone_effect_name": "default"
+      }
+    }
+  }
+}

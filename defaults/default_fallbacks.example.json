@@ -1,0 +1,34 @@
+{
+  "schema": "jianying-template-video-remix.default-fallbacks.v1",
+  "name": "default_fallbacks.example",
+  "usage": "Copy to default_fallbacks.local.json and edit paths for your machine, or run scripts/init_fallbacks.py to generate local overrides automatically.",
+  "fallbacks": {
+    "popup_title": {
+      "default_style": "shadow_notice",
+      "styles": {
+        "shadow_notice": {
+          "font_resource_id": "",
+          "font_path": "assets/fonts/popup_title.ttf",
+          "font_size": 15,
+          "default_text_color": "#ffde00"
+        }
+      }
+    },
+    "subtitle": {
+      "font_resource_id": "",
+      "font_path": "assets/fonts/subtitle.ttf",
+      "font_size": 9.0,
+      "text_color": "#ffffff"
+    },
+    "bgm": {
+      "path": "assets/bgm/fallback_bgm.mp3",
+      "name": "Fallback BGM"
+    },
+    "tts": {
+      "default_voice": {
+        "tone_speaker": "zh_female_mizai_saturn_bigtts",
+        "tone_platform": "sami"
+      }
+    }
+  }
+}
