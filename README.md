@@ -1,16 +1,16 @@
 # jianying-template-video-remix
 
-Agent skill for remixing **Jianying Pro / CapCut** template drafts: extract subtitle/title/BGM style from an existing draft, write or reuse narration, match media clips by filename, generate continuous TTS, and output a new editable draft (not MP4 unless you export manually).
+面向 Agent 的剪映专业版模板混剪技能：从已有草稿提取字幕 / 标题 / BGM 风格，撰写或复用解说词，按素材文件名匹配画面，生成连续 TTS 配音，并输出新的可编辑草稿（默认不导出 MP4，需在剪映内自行导出）。
 
-## Features
+## 功能概览
 
-- Template style analysis (encrypted drafts supported via `--jy-install`)
-- Short single-line subtitles (no forced TTS time-stretch)
-- BGM vs voiceover/dub classification (avoids using `配音` tracks as background music)
-- Event-driven pop-up titles and SFX
-- Media plan handoff (`media_plan.json`)
+- 模板风格分析（加密草稿可通过 `--jy-install` 解密）
+- 短句单行字幕（不对 TTS 做加减速拉伸）
+- 区分 BGM 与配音素材（避免把「配音」轨道误当背景音乐）
+- 按内容节点添加弹窗标题与音效
+- 输出素材编排表 `media_plan.json` 便于核对
 
-## Quick start
+## 快速开始
 
 ```powershell
 cd scripts
@@ -33,35 +33,23 @@ python remix_draft.py `
 python validate_draft.py --draft-name "My_Remix"
 ```
 
-## Layout
+## 目录结构
 
-| Path | Purpose |
-|------|---------|
-| `SKILL.md` | Agent skill instructions |
-| `scripts/` | CLI tools and tests |
-| `vendor/jianying-editor-skill/` | Bundled draft editor helper |
-| `defaults/` | Portable fallbacks (run `bootstrap_assets.py` for fonts/BGM) |
-| `references/` | Workflow and schema docs |
+| 路径 | 说明 |
+|------|------|
+| `SKILL.md` | Agent 技能说明（工作流与规则） |
+| `scripts/` | 命令行脚本与单元测试 |
+| `vendor/jianying-editor-skill/` | 内置草稿编辑辅助库 |
+| `defaults/` | 便携回退资源（需先运行 `bootstrap_assets.py` 生成字体 / BGM） |
+| `references/` | 工作流示例与风格配置说明 |
 
-## Requirements
+## 环境要求
 
-- Windows (Jianying Pro paths, optional `videoeditor.dll` decrypt)
+- Windows（剪映草稿路径；可选 `videoeditor.dll` 解密）
 - Python 3.10+
-- `ffmpeg` / `ffprobe` on PATH (recommended)
-- Jianying Pro installed for opening generated drafts
+- 建议将 `ffmpeg`、`ffprobe` 加入 PATH
+- 已安装剪映专业版，用于打开生成后的草稿
 
-## Publish to GitHub (git only)
+## 许可说明
 
-1. Create an empty public repo: [github.com/new](https://github.com/new?name=jianying-template-video-remix) (no README/license).
-2. Run:
-
-```powershell
-cd C:\Users\11709\.codex\skills\jianying-template-video-remix
-.\scripts\publish_to_github.ps1
-```
-
-Default remote: `https://github.com/uniquets/jianying-template-video-remix.git`
-
-## License
-
-Use and modify for your own workflows. Third-party code under `vendor/` retains its original terms.
+可自行用于个人工作流。`vendor/` 下的第三方代码仍遵循其原有许可条款。
