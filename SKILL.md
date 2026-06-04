@@ -13,13 +13,18 @@ This skill is template-driven, but not template-locked: preserve the template's 
 
 ## Required Inputs
 
-- `template_draft`: Jianying draft folder or draft name used as the style source.
-- `media_dir`: Folder containing new video/image assets.
-- One of:
-  - `script`: Final narration copy.
-  - `topic`: Topic/instructions for Codex to write narration copy.
-- `draft_name`: New draft name.
-- Optional `target_duration`: Rough script-length hint for the agent when writing narration. Final timeline follows natural TTS length (+/- drift is fine). **Never** time-stretch (speed up/slow down) generated TTS to hit a target; rewrite the script instead.
+All of the following must be collected **before** any analyze/remix command runs (see **Step 1 — 确认环境**):
+
+| 字段 | 必填 | 说明 |
+|------|------|------|
+| `template_draft` | 是 | **剪映草稿名称**（或草稿文件夹完整路径），作为风格参考模板 |
+| `media_dir` | 是 | 新视频/图片素材文件夹路径 |
+| `script` 或 `topic` | 二选一 | 最终解说文案，或用于撰写解说的主题/要求 |
+| `draft_name` | 是 | 生成的新草稿名称 |
+
+可选：
+
+- `target_duration`: 写稿时的粗略时长参考；成片以 TTS 自然时长为准。**禁止**对生成配音做加减速拉伸，时长不合适则改文案。
 
 ## Workflow
 
@@ -28,12 +33,73 @@ This skill is template-driven, but not template-locked: preserve the template's 
    - Optional: `python scripts/init_fallbacks.py` to write `defaults/default_fallbacks.local.json` (gitignored) with machine-specific paths.
    - Never store user narration, style profiles, or `media_plan.json` inside the skill directory. Use `--output-dir` on remix or a user project folder.
 
-1. **First-use orientation and confirmation**
-   - Before generating a draft for a user who has not already confirmed these choices in the current thread, briefly explain what will be reused from the template: subtitle style, title style when extractable, title/text animations when extractable, BGM, reusable sound effects, TTS speaker when present, timeline pacing cues, and safe text placement rules.
-   - Also explain what may use defaults when the template lacks extractable values: TTS voice, fallback BGM, generated fallback sound effects, fallback pop-up title style, and conservative media/title placement.
-   - Ask the user to confirm how narration copy should be obtained: use a provided final script, let Codex draft from a topic, or let Codex revise a rough script.
-   - Ask whether automatic TTS voiceover should be generated. If the user declines TTS, require a voice/audio file or clarify that the draft will be assembled without generated narration.
-   - Keep this orientation concise. Do not proceed to generation until the user has answered the narration-source and TTS questions, unless the user already provided an explicit final script and explicitly requested automatic TTS.
+1. **确认环境（强制门禁，未确认不得执行）**
+
+   **在运行 `analyze_template_style.py`、`remix_draft.py` 或写稿/排素材之前**，必须完成本步。若用户在本轮对话中已逐项给出并明确回复「确认开始」，可视为通过。
+
+   ### 1.1 核对必填项（缺一项就停下追问）
+
+   - **参考模板**：剪映草稿名称（或完整路径）。仅有模糊描述（如「上次那个」）不算齐全；需能唯一定位到草稿文件夹。
+   - **主题或文案**：已提供最终 `script`，或已提供 `topic`/改写要求（由 Agent 写稿须在确认单里写明）。
+   - **素材文件夹**：`media_dir` 的完整路径；若路径不存在或为空，先告知用户并停止。
+   - **新草稿名称**：`draft_name`。
+   - **TTS**：是否自动生成配音。若否，需说明使用用户自备音频或无声成片。
+
+   缺项时用简短问句补齐，不要用 AskQuestion 代替用户对整单的确认。
+
+   ### 1.2 向用户说明「会从模板参考什么」
+
+   用中文简要列出（结合模板名，避免空泛）：
+
+   **通常会沿用：**
+
+   - 字幕样式（字体、颜色、底条/阴影、位置）
+   - 弹窗标题样式与文字动画（若模板可提取）
+   - BGM（仅当识别为背景音乐；名称含「配音/旁白/解说」的轨道**不会**当 BGM）
+   - 模板内可复用的音效
+   - TTS 音色（模板有则沿用，否则用默认女声）
+   - 按解说语义匹配素材文件名、事件化标题与音效（非每镜固定套路）
+
+   **可能使用默认：**
+
+   - 模板无可靠 BGM → 内置 `defaults/assets/bgm/fallback_bgm.mp3`
+   - 无 TTS 音色 → `defaults/default_fallbacks.json` 默认发音人
+   - 标题样式弱缺失 → 内置弹窗标题样式
+   - 素材文件名无法表达场景 → 请你重命名或在你同意后再做抽帧分析
+
+   ### 1.3 向用户说明「将如何操作」
+
+   用 4–6 条说明执行顺序，例如：
+
+   1. 解析模板草稿（加密则需本机剪映安装目录解密）→ 生成 `template_style.json`
+   2. 按主题写稿或采用你提供的文案 → 拆成短句字幕 → 生成**连续** TTS（不变速）
+   3. 按文件名与解说语义编排 `media_plan.json` 与视频轨
+   4. 套用模板字幕/标题/BGM/音效规则写入新草稿
+   5. 校验时长、轨道与字幕 → 告知草稿路径（不默认导出 MP4）
+
+   ### 1.4 输出确认单并请用户明确同意
+
+   将已收集信息整理为一张**确认单**（示例）：
+
+   ```
+   【剪映模板混剪 — 执行确认单】
+   参考模板：<草稿名称或路径>
+   新草稿名：<draft_name>
+   素材目录：<media_dir>
+   文案来源：<用户提供全文 / 按主题「…」撰写>
+   TTS：<自动生成 / 不使用，说明…>
+   目标时长：<自然时长 / 约 N 秒仅作写稿参考>
+   将从模板参考：<一句话摘要>
+   将执行：<步骤 1–5 摘要>
+   ```
+
+   结尾必须询问：**「请确认以上内容，回复「确认开始」后我再执行。」**
+
+   **硬规则：**
+
+   - 在用户明确确认（如「确认开始」「可以开始」「按确认单执行」）之前，**禁止**运行分析/混剪脚本、禁止创建新草稿、禁止替用户做实质性生成（除为补齐确认单而只读检查路径/草稿是否存在）。
+   - 用户中途修改任一项 → 更新确认单并重新确认。
+   - 仅当用户已预先给出全部必填项且明确说「直接开始、无需再确认」时，可跳过重复确认，但仍需在执行前复述关键参数。
 
 2. **Locate dependencies**
    - Use the bundled editor helper at `vendor/jianying-editor-skill` by default.

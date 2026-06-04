@@ -1,7 +1,7 @@
 interface:
   display_name: "Jianying Template Video Remix"
   short_description: "Remix Jianying templates into new styled drafts"
-  default_prompt: "Use $jianying-template-video-remix to create a same-style Jianying draft from my template, script or topic, and media folder."
+  default_prompt: "Use $jianying-template-video-remix. First complete the environment confirmation checklist (template draft name, media folder, topic/script, new draft name, TTS choice), explain what will be reused from the template, wait for my 确认开始, then execute."
 
 policy:
   allow_implicit_invocation: true

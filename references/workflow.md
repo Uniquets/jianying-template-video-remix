@@ -1,5 +1,15 @@
 # Workflow
 
+## Step 1 — 确认环境（必须先做）
+
+在运行下方任何命令前，Agent 必须：
+
+1. 收齐：**剪映参考草稿名称/路径**、**素材文件夹**、**主题或最终文案**、**新草稿名**、**是否 TTS**。
+2. 用中文说明将从模板参考哪些样式、以及 analyze → 写稿/TTS → 排素材 → remix → validate 的流程。
+3. 输出确认单，等用户回复 **「确认开始」** 后再继续。
+
+缺必填项或用户未确认时，不得执行 `analyze_template_style.py` / `remix_draft.py`。
+
 ## One-time setup
 
 ```powershell
