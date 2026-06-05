@@ -113,7 +113,25 @@ All of the following must be collected **before** any analyze/remix command runs
    - Save a style profile JSON when the user may reuse the same template later.
 
 4. **Prepare the new script**
-   - If the user gave a topic, write a concise creator-style narration as a **new** script file.
+
+   ### 4.1 文案原创（硬规则，违反即失败）
+
+   用户选择 **按主题写稿**（`topic`，未提供最终 `script`）时：
+
+   - **必须新写**口播：只根据确认单里的主题/要点 + **`media_dir` 内文件名**（场景标签）创作。
+   - **禁止**从以下来源复制、改写或「换壳」旁白（哪怕同一游戏、同一系列）：
+     - 任意其他剪映草稿下的 `temp_assets/media_plan.json`（含 `context` 字段）
+     - 其他草稿的 `draft_content.json` / 字幕轨文案
+     - 上一轮对话里已生成过的 `narration.txt`（除非用户明确说「沿用上一版文案」）
+   - **参考模板名 ≠ 口播主题**：例如模板叫 `洛克王国异色`，用户主题是 `伊莫生态全解`，口播必须讲用户主题，**不得**因模板名擅自写「异色」「闪光」等未在用户主题或素材文件名中出现的概念。
+   - 写稿前用只读方式列出 `media_dir` 中 `*.mp4` 等文件名；口播每个大段至少对应一个**真实存在的**文件名语义（如 `开局`、`捕捉睡着`、`生气`），禁止写素材里不存在的桥段。
+   - 将成稿写入 `--output-dir` 或用户项目目录下的 `narration.txt`（或确认单约定的路径），并在执行 `remix_draft.py` **之前**用一句话告知用户：**「口播为本次按主题新写，未复用其他草稿字幕。」**
+
+   用户已提供 **完整 `script` / `script-file`** 时：以用户文稿为准，仅可做短句拆分与标点微调，**不得**擅自替换为用户未确认的新主题内容。
+
+   ### 4.2 格式与时长
+
+   - If the user gave a topic, write a concise creator-style narration as a **new** script file (see §4.1).
    - Do not reuse narration from other drafts on disk unless the user explicitly asks to reuse that script.
    - Do not read `temp_assets/media_plan.json` or subtitle text from unrelated drafts to copy wording.
    - Save narration outside the skill directory (for example the user's `--output-dir` or project folder).
@@ -158,6 +176,23 @@ All of the following must be collected **before** any analyze/remix command runs
   - UI/system points: tech prompt, click, page flip.
   - Impact/emotion: low hit, alert, short whoosh.
 - Avoid the repeated formula `sound + pop title + hard cut` on every clip.
+
+## Editorial QA Rules
+
+Apply these rules whenever building commentary, analysis, review, or杂谈 videos:
+
+- Prefer real gameplay / in-engine footage over PV or cinematic promo footage. Use PV shots only when the narration is specifically about marketing, announcement promises, concept packaging, or the "pretty shell" of a game.
+- Match visuals to the current narration claim. When the script names a game, system, ecology, city, dungeon, map, UI, pet interaction, or failure point, cut to footage that directly supports that claim. For broad argument sections, change shots every few sentences to avoid visual fatigue.
+- Do not reuse the same source footage interval in one video. Track used `source_start` / `source_end` ranges per underlying source file, including hardlinks or renamed copies, and choose a new non-overlapping range or another source.
+- Do not start clips at source time `0`. Skip black frames, logos, loading cards, and dark intro fades; for PV-like or uncertain sources, inspect brightness or sample frames and move `source_start` until the first visible gameplay/usable frame.
+- Keep narration and subtitles synchronized. Do not change subtitle timing after TTS alignment unless the voice timing is changed at the same time. Do not speed-change voiceover to force duration.
+- Subtitle text should be short single-line chunks and should not end with punctuation marks.
+- Analyze the full script before placing pop-up titles. Put titles where the narration introduces a key claim, contrast, judgment, example, or conceptual turn; for commentary videos, a practical cadence is about every 25-35 seconds unless the template or user says otherwise.
+- Pop-up title text must be an exact core phrase from the nearby subtitle/narration window, not an arbitrary summary and not a lazy leading slice of the subtitle. Prefer compact key phrases that the viewer just heard or is about to hear.
+- When extracting pop-up title style from the template, preserve the complete extracted title style as a unit: font, size, fill/color treatment, border, transform/position conventions, animation references, and other text material settings. Do not cherry-pick only font/color unless the user explicitly asks to restyle.
+- Vary pop-up title colors, positions, and animations when the template/style library supports it. Keep positions inside a safe frame, avoid the center when it blocks gameplay, and never cover subtitles.
+- Every pop-up title should have a matching sound effect whose start time aligns with the title start time. Choose sound effects that fit the title intent and animation.
+- Final validation must cover: draft structural validation, voice/subtitle/video end alignment, subtitle punctuation, title count and cadence, title text source, title style preservation, title position safety, animation variety, title-sfx start alignment, dark/black clip starts, source interval reuse, and track overlaps.
 
 ## Scripts
 
