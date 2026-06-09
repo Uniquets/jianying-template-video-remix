@@ -38,6 +38,60 @@ TARGET_TRACKS = {
 ANIMS = ["冲屏位移", "打字机_I", "弹入跳动", "辉光扫描", "弹性伸缩", "便利贴", "放大震动", "圆柱体滚动", "电光", "向右滑动", "随机弹跳", "鼠标点击"]
 
 
+LEGACY_TITLE_TRACKS = {TARGET_TRACKS["title"], TARGET_TRACKS["hero"], TARGET_TRACKS["note"]}
+POPUP_TITLE_TRACK_PREFIX = "Template_Popup_Title_"
+POPUP_TITLE_TRACK_NAME = TARGET_TRACKS["title"]
+TITLE_MIN_GAP_S = 0.55
+TITLE_MIN_DURATION_S = 1.20
+TITLE_MAX_DURATION_S = 1.85
+DEFAULT_SOURCE_VOLUME = 1.0
+DEFAULT_MUTE_MAIN_VIDEO_TRACK = True
+TITLE_COLOR_PALETTE = [
+    (1.0, 0.87, 0.0),
+    (0.996, 0.322, 0.322),
+    (0.0, 0.902, 0.463),
+    (1.0, 1.0, 1.0),
+    (1.0, 0.157, 0.498),
+    (0.914, 0.843, 0.643),
+]
+
+
+def title_color_for_index(index: int) -> tuple[float, float, float]:
+    return TITLE_COLOR_PALETTE[index % len(TITLE_COLOR_PALETTE)]
+
+
+def title_track_name(index: int) -> str:
+    return POPUP_TITLE_TRACK_NAME
+
+
+def is_title_track_name(name: str | None) -> bool:
+    return bool(name) and (name in LEGACY_TITLE_TRACKS or name.startswith(POPUP_TITLE_TRACK_PREFIX))
+
+
+def popup_title_index(name: str | None) -> int | None:
+    if not name or not name.startswith(POPUP_TITLE_TRACK_PREFIX):
+        return None
+
+
+def title_duration_for_row(row: dict) -> float:
+    source_duration = max(0.0, float(row.get("end", 0.0)) - float(row.get("start", 0.0)))
+    return round(min(TITLE_MAX_DURATION_S, max(TITLE_MIN_DURATION_S, source_duration + 0.45)), 3)
+
+
+def title_start_for_row(row: dict) -> float:
+    return round(max(0.0, float(row.get("start", 0.0)) + 0.03), 3)
+
+
+def title_windows_conflict(start_a: float, duration_a: float, start_b: float, duration_b: float, min_gap: float = TITLE_MIN_GAP_S) -> bool:
+    end_a = start_a + duration_a
+    end_b = start_b + duration_b
+    return start_a < end_b + min_gap and start_b < end_a + min_gap
+    try:
+        return max(0, int(name.removeprefix(POPUP_TITLE_TRACK_PREFIX)) - 1)
+    except ValueError:
+        return None
+
+
 def add_jianying_skill_path(path: str | None) -> Path:
     candidates = []
     if path:
@@ -237,31 +291,30 @@ TITLE_KEYWORDS = (
     "机制",
 )
 
-TITLE_PHRASES = [
-    (('第一次', '打开'), '初次登场'),
-    (('第一次', '见到'), '初次登场'),
-    (('第一次', '遇见'), '初次登场'),
-    (('时间', '距离', '状态'), '时机会变'),
-    (('反馈', '小系统'), '关键变量'),
-    (('会反馈', '系统'), '关键变量'),
-    (('目标',), '关键看点'),
-    (('操作', '策略'), '操作策略'),
-    (('反馈', '边界'), '边界反馈'),
-    (('探索', '系统'), '生态系统'),
-    (('开局', '环境'), '先看环境'),
-    (('资源',), '资源线索'),
-    (('逃跑', '小家伙'), '逃跑的小家伙'),
-    (('睡着', '捕捉', '逃跑'), '时机会变'),
-    (('抢走', '食物'), '抢食反应'),
-    (('表情', '动作', '边界'), '边界反馈'),
-    (('食物', '距离', '状态', '时间'), '关键变量'),
-    (('变量', '信息'), '关键节点'),
-    (('所有变量',), '关键节点'),
-    (('失败', '修正'), '失败修正'),
-    (('捕捉', '策略'), '捕捉策略'),
-    (('每一次', '互动'), '互动反馈'),
-    (('生态', '系统'), '生态系统'),
-]
+TITLE_EXACT_PHRASES = (
+    "宠物互动",
+    "新手关卡",
+    "稳定性问题",
+    "生态感",
+    "触发逃跑",
+    "拿走食物",
+    "抱走",
+    "单纯数值宠物",
+    "继续打磨",
+    "完成品",
+    "操作策略",
+    "边界反馈",
+    "互动反馈",
+    "生态系统",
+    "资源线索",
+    "失败修正",
+    "捕捉策略",
+)
+
+TITLE_DYNAMIC_PATTERNS = (
+    re.compile(r"捕捉[^，。！？!?；;、：:\s会]{2,8}"),
+    re.compile(r"[A-Za-z0-9]+[^，。！？!?；;、：:\s]{0,8}BUG"),
+)
 
 
 
@@ -275,29 +328,36 @@ def clean_title_source(text: str) -> str:
     return cleaned
 
 
-def core_title_for_text(text: str) -> str:
-    for keywords, title in TITLE_PHRASES:
-        if all(keyword in text for keyword in keywords):
-            return title
-
-    clauses = [x.strip() for x in re.split(r"[，。！？!?；;、：:]", text or "") if x.strip()]
-    candidate = ""
-    if clauses:
-        candidate = max(clauses, key=lambda part: (sum(word in part for word in TITLE_KEYWORDS), min(len(part), 14)))
-    candidate = clean_title_source(candidate or text)
-
-    replacements = [
-        ("真正能被探索的生态系统", "生态系统"),
-        ("不只是抓到多少只", "不止收集"),
-        ("都会影响关系", "关系变量"),
-        ("在探索中读懂行为", "读懂行为"),
-        ("触发不同反应", "互动反馈"),
+def exact_title_candidates(text: str) -> list[str]:
+    cleaned = clean_title_source(text)
+    candidates = [match.group(0) for pattern in TITLE_DYNAMIC_PATTERNS for match in pattern.finditer(cleaned)]
+    candidates.extend(phrase for phrase in TITLE_EXACT_PHRASES if phrase in cleaned)
+    if candidates:
+        return list(dict.fromkeys(candidates))
+    clauses = [clean_title_source(x) for x in re.split(r"[，。！？!?；;、：:\s]+", text or "")]
+    return [
+        clause
+        for clause in clauses
+        if 2 <= len(clause) <= 10 and any(keyword in clause for keyword in TITLE_KEYWORDS)
     ]
-    for old, new in replacements:
-        if old in candidate:
-            return new
 
-    return candidate[:8] or "关键看点"
+
+def core_title_for_text(text: str) -> str:
+    candidates = exact_title_candidates(text)
+    if candidates:
+        return max(candidates, key=lambda item: (sum(keyword in item for keyword in TITLE_KEYWORDS), len(item)))
+    return ""
+
+
+def title_rank(title: str) -> float:
+    if title.startswith("捕捉"):
+        return 2.5
+    if "BUG" in title.upper():
+        return 8.5
+    try:
+        return float(TITLE_EXACT_PHRASES.index(title))
+    except ValueError:
+        return float(len(TITLE_EXACT_PHRASES) + 10)
 
 
 def safe_title_position(index: int, event_count: int, title: str) -> tuple[float, float]:
@@ -320,16 +380,42 @@ def event_title_specs(rows: list[dict], event_count: int | None = None) -> list[
     if not rows:
         return []
     count = event_count if event_count is not None else min(12, max(4, len(rows) // 5))
-    indexes = sorted(set(round(i * (len(rows) - 1) / max(1, count - 1)) for i in range(count)))
     used = set()
+    candidates = []
+    for row_index, row in enumerate(rows):
+        for title in exact_title_candidates(row["text"]):
+            if title in used:
+                continue
+            used.add(title)
+            score = (
+                (100 - title_rank(title)) * 100
+                + sum(keyword in title for keyword in TITLE_KEYWORDS) * 10
+                + max(0, 8 - abs(len(title) - 4))
+            )
+            candidates.append({"row_index": row_index, "text": title, "score": score})
+    selected = []
+    for item in sorted(candidates, key=lambda item: (-item["score"], item["row_index"])):
+        row = rows[item["row_index"]]
+        start = title_start_for_row(row)
+        duration = title_duration_for_row(row)
+        if any(title_windows_conflict(start, duration, old["start"], old["duration"]) for old in selected):
+            continue
+        selected.append({**item, "start": start, "duration": duration})
+        if len(selected) >= count:
+            break
+    selected.sort(key=lambda item: item["start"])
     specs = []
-    for order, row_index in enumerate(indexes):
-        title = core_title_for_text(rows[row_index]["text"])
-        if title in used:
-            title = clean_title_source(rows[row_index]["text"])[:8] or title
-        used.add(title)
-        x, y = safe_title_position(order, len(indexes), title)
-        specs.append({"row_index": row_index, "text": title, "x": x, "y": y})
+    for order, item in enumerate(selected):
+        title = item["text"]
+        x, y = safe_title_position(order, len(selected), title)
+        specs.append({
+            "row_index": item["row_index"],
+            "text": title,
+            "x": x,
+            "y": y,
+            "start": item["start"],
+            "duration": item["duration"],
+        })
     return specs
 
 
@@ -441,6 +527,46 @@ def subtitle_timings(groups: list[dict], total: float) -> list[dict]:
     if rows:
         rows[-1]["end"] = min(total, rows[-1]["end"])
     return rows
+
+
+def load_external_voice(voice_file: Path, voice_groups_file: Path) -> tuple[float, list[dict]]:
+    if not voice_file.exists():
+        raise FileNotFoundError(f"external voice file not found: {voice_file}")
+    if not voice_groups_file.exists():
+        raise FileNotFoundError(f"external voice groups file not found: {voice_groups_file}")
+    payload = json.loads(voice_groups_file.read_text(encoding="utf-8"))
+    groups = payload.get("groups")
+    if not isinstance(groups, list) or not groups:
+        raise ValueError(f"external voice groups are missing or empty: {voice_groups_file}")
+    duration = float(payload.get("duration") or 0.0)
+    if duration <= 0:
+        duration = probe_duration(voice_file)
+    if duration <= 0:
+        raise ValueError(f"external voice duration is unavailable: {voice_file}")
+    for group in groups:
+        if "duration" not in group or "chunks" not in group:
+            raise ValueError("external voice groups must include duration and chunks")
+    return duration, groups
+
+
+def voice_for_script(
+    chunks: list[str],
+    external_voice_file: str | None,
+    external_voice_groups_file: str | None,
+    speaker: str,
+    generated_voice_path: Path,
+) -> tuple[Path, float, list[dict]]:
+    if external_voice_file or external_voice_groups_file:
+        if not external_voice_file or not external_voice_groups_file:
+            raise ValueError("pass both --voice-file and --voice-groups-file for external narration")
+        voice_path = Path(external_voice_file)
+        duration, groups = load_external_voice(voice_path, Path(external_voice_groups_file))
+        group_chunks = [chunk for group in groups for chunk in group.get("chunks", [])]
+        if group_chunks != chunks:
+            raise ValueError("external voice groups do not match confirmed script chunks")
+        return voice_path, duration, groups
+    duration, groups = asyncio.run(generate_voice(chunks, speaker, generated_voice_path))
+    return generated_voice_path, duration, groups
 
 
 def hex_to_rgb(hex_color: str, default=(1.0, 1.0, 1.0)):
@@ -727,8 +853,10 @@ def patch_text_content(mat: dict, font_id: str | None, font_path: str | None, si
 def patch_draft(draft_path: Path, profile: dict, speaker: str, voice_path: Path) -> None:
     content_path = draft_path / "draft_content.json"
     data = json.loads(content_path.read_text(encoding="utf-8"))
+    set_main_video_track_mute(data)
     subtitle_ids = track_ids(data, {TARGET_TRACKS["subtitle"]})
-    title_ids = track_ids(data, {TARGET_TRACKS["title"], TARGET_TRACKS["hero"], TARGET_TRACKS["note"]})
+    title_ids = title_track_ids(data)
+    popup_title_colors = popup_title_color_ids(data)
     sub = profile.get("subtitle", {})
     title = profile.get("title", {})
 
@@ -758,7 +886,9 @@ def patch_draft(draft_path: Path, profile: dict, speaker: str, voice_path: Path)
                 "layer_weight": 1,
             })
         elif mid in title_ids:
-            color = text_fill_color(mat) if title.get("preserve_existing_color") else None
+            color = popup_title_colors.get(mid)
+            if color is None and title.get("preserve_existing_color"):
+                color = text_fill_color(mat)
             color = color or hex_to_rgb(title.get("text_color", "#ffde00"), (1.0, 0.87, 0.0))
             patch_text_content(mat, title.get("font_resource_id"), title.get("font_path"), float(title.get("font_size") or 15.0), list(color), False, title)
             mat.update({
@@ -801,6 +931,40 @@ def track_ids(data: dict, names: set[str]) -> set[str]:
     return ids
 
 
+def title_track_ids(data: dict) -> set[str]:
+    ids = set()
+    for track in data.get("tracks", []):
+        if is_title_track_name(track.get("name")):
+            for seg in track.get("segments", []):
+                if seg.get("material_id"):
+                    ids.add(seg["material_id"])
+    return ids
+
+
+def popup_title_color_ids(data: dict) -> dict[str, tuple[float, float, float]]:
+    segments = []
+    for track in data.get("tracks", []):
+        if not is_title_track_name(track.get("name")):
+            continue
+        for seg in track.get("segments", []):
+            mid = seg.get("material_id")
+            if mid:
+                start = seg.get("target_timerange", {}).get("start", 0)
+                segments.append((start, mid))
+    colors = {}
+    for index, (_, mid) in enumerate(sorted(segments)):
+        colors[mid] = title_color_for_index(index)
+    return colors
+
+
+def set_main_video_track_mute(data: dict, mute: bool = DEFAULT_MUTE_MAIN_VIDEO_TRACK) -> None:
+    data.setdefault("config", {})["video_mute"] = False
+    for track in data.get("tracks", []):
+        if track.get("name") == TARGET_TRACKS["video"]:
+            track["attribute"] = int(bool(mute))
+            track.setdefault("flag", 0)
+
+
 def add_motion(seg, draft, duration: float, mode: int):
     try:
         from pyJianYingDraft.keyframe import KeyframeProperty as KP
@@ -832,13 +996,21 @@ def build(args) -> dict:
         or profile.get("audio", {}).get("tts", {}).get("tone_speaker")
         or default_tts_speaker(fallback_bundle)
     )
-    if not speaker:
+    if not speaker and not args.voice_file:
         raise ValueError("No TTS speaker found in template or fallbacks; pass --speaker.")
+    if not speaker:
+        speaker = args.voice_provider or "external_voice"
 
     project = JyProject(args.draft_name, width=args.width, height=args.height, overwrite=True)
     temp_dir = Path(project.root) / project.name / "temp_assets"
-    voice_path = temp_dir / VOICE_WAV_NAME
-    voice_duration, voice_groups = asyncio.run(generate_voice(chunks, speaker, voice_path))
+    generated_voice_path = temp_dir / VOICE_WAV_NAME
+    voice_path, voice_duration, voice_groups = voice_for_script(
+        chunks,
+        args.voice_file,
+        args.voice_groups_file,
+        speaker,
+        generated_voice_path,
+    )
     rows = subtitle_timings(voice_groups, voice_duration)
 
     voice = project.add_audio_safe(str(voice_path), start_time="0s", duration=f"{voice_duration:.3f}s", track_name=TARGET_TRACKS["voice"])
@@ -907,21 +1079,21 @@ def build(args) -> dict:
     fallback_sfx = generate_fallback_sfx(temp_dir / "fallback_sfx")
     title_style = profile.get("title", {})
     title_specs = event_title_specs(rows)
-    event_count = len(title_specs)
     sfx_names = list(fallback_sfx)
     for n, spec in enumerate(title_specs):
-        row = rows[spec["row_index"]]
         phrase = spec["text"]
         x, y = spec["x"], spec["y"]
-        track = TARGET_TRACKS["hero"] if n == 0 else (TARGET_TRACKS["note"] if n in {event_count - 3, event_count - 2} else TARGET_TRACKS["title"])
-        color = (1.0, 0.87, 0.0) if track != TARGET_TRACKS["note"] else (0.996, 0.322, 0.322)
+        start = float(spec["start"])
+        duration = float(spec["duration"])
+        track = title_track_name(n)
+        color = title_color_for_index(n)
         project.add_text_simple(
             phrase,
-            start_time=f"{row['start'] + 0.03:.3f}s",
-            duration=f"{min(2.35, max(1.35, row['end'] - row['start'] + 0.85)):.3f}s",
+            start_time=f"{start:.3f}s",
+            duration=f"{duration:.3f}s",
             track_name=track,
             style=draft.TextStyle(size=float(title_style.get("font_size") or 15.0), bold=True, color=color, align=1, auto_wrapping=True, max_line_width=0.5),
-            border=draft.TextBorder(color=(0, 0, 0) if track != TARGET_TRACKS["note"] else (1, 1, 1), alpha=1.0, width=8.0),
+            border=draft.TextBorder(color=(0, 0, 0), alpha=1.0, width=8.0),
             clip_settings=draft.ClipSettings(transform_x=x, transform_y=y),
             anim_in=ANIMS[n % len(ANIMS)],
             anim_in_duration="0.50s",
@@ -929,7 +1101,7 @@ def build(args) -> dict:
             anim_out_duration="0.30s",
         )
         sfx_path = fallback_sfx[sfx_names[n % len(sfx_names)]]
-        seg = project.add_audio_safe(str(sfx_path), start_time=f"{max(0, row['start']):.3f}s", duration="0.60s", track_name=TARGET_TRACKS["sfx"])
+        seg = project.add_audio_safe(str(sfx_path), start_time=f"{max(0, start):.3f}s", duration="0.60s", track_name=TARGET_TRACKS["sfx"])
         if seg:
             seg.volume = 0.45 + (n % 4) * 0.08
 
@@ -967,13 +1139,16 @@ def main() -> int:
         help="Optional rough script-length hint for the agent only. TTS is never time-stretched to match this.",
     )
     parser.add_argument("--speaker")
+    parser.add_argument("--voice-file", help="Confirmed externally generated narration audio, such as Fish Audio output.")
+    parser.add_argument("--voice-groups-file", help="Timing/chunk groups for --voice-file.")
+    parser.add_argument("--voice-provider", default="jianying_tts", help="Voice provider label for handoff metadata.")
     parser.add_argument("--jianying-skill")
     parser.add_argument("--jy-install")
     parser.add_argument("--width", type=int, default=1920)
     parser.add_argument("--height", type=int, default=1080)
     parser.add_argument("--voice-volume", type=float, default=1.48)
     parser.add_argument("--bgm-volume", type=float, default=0.40)
-    parser.add_argument("--source-volume", type=float, default=0.34)
+    parser.add_argument("--source-volume", type=float, default=DEFAULT_SOURCE_VOLUME)
     parser.add_argument("--analyze-frames", action="store_true", help="Extract sample frames only when the user explicitly approves visual frame analysis.")
     args = parser.parse_args()
     print(json.dumps(build(args), ensure_ascii=False))

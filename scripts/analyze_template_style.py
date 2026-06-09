@@ -67,6 +67,31 @@ def first_style_content(mat: dict) -> dict:
     return styles[0] if styles else {}
 
 
+def shadow_style_fields(mat: dict, style: dict) -> dict:
+    shadows = style.get("shadows") or []
+    shadow = shadows[0] if shadows else {}
+    color = (
+        shadow.get("content", {})
+        .get("solid", {})
+        .get("color")
+    )
+    if isinstance(color, list) and len(color) >= 3:
+        shadow_color = "#{:02x}{:02x}{:02x}".format(
+            max(0, min(255, round(float(color[0]) * 255))),
+            max(0, min(255, round(float(color[1]) * 255))),
+            max(0, min(255, round(float(color[2]) * 255))),
+        )
+    else:
+        shadow_color = mat.get("shadow_color", "#000000")
+    return {
+        "has_shadow": mat.get("has_shadow", bool(shadows)),
+        "shadow_alpha": mat.get("shadow_alpha", shadow.get("alpha", 0.9)),
+        "shadow_color": shadow_color,
+        "shadow_distance": mat.get("shadow_distance", shadow.get("distance", 5.0)),
+        "shadow_smoothing": mat.get("shadow_smoothing", shadow.get("diffuse", 0.45)),
+    }
+
+
 def pick_subtitle_text(data: dict, mats: dict) -> dict:
     candidates = []
     for mid in track_material_ids(data, "text"):
@@ -191,6 +216,7 @@ def analyze(draft_path: Path, jy_install: str | None = None) -> dict:
             "text_color": title.get("text_color", "#ffde00"),
             "border_color": title.get("border_color", "#000000"),
             "border_width": title.get("border_width", 0.08),
+            **shadow_style_fields(title, title_style),
             "animations": animations[:12],
         },
         "audio": audio_profile(data),

@@ -59,6 +59,14 @@ def overlaps(data: dict) -> list[dict]:
     return bad
 
 
+LEGACY_TITLE_TRACKS = {"Template_Hero_Title", "Template_Event_Titles", "Template_Red_Notes"}
+POPUP_TITLE_TRACK_PREFIX = "Template_Popup_Title_"
+
+
+def is_title_track_name(name: str | None) -> bool:
+    return bool(name) and (name in LEGACY_TITLE_TRACKS or name.startswith(POPUP_TITLE_TRACK_PREFIX))
+
+
 def validate(draft_path: Path, jy_install: str | None = None) -> dict:
     data = load_draft(draft_path, jy_install)
     mats = material_index(data)
@@ -74,11 +82,12 @@ def validate(draft_path: Path, jy_install: str | None = None) -> dict:
     audios = data.get("materials", {}).get("audios", [])
     voice = [m for m in audios if "narration_full" in m.get("path", "")]
     bgm = [m for m in audios if m.get("type") == "music" or m.get("music_id")]
-    title_segments = (
-        segs("Template_Hero_Title")
-        + segs("Template_Event_Titles")
-        + segs("Template_Red_Notes")
-    )
+    title_segments = [
+        segment
+        for track in data.get("tracks", [])
+        if is_title_track_name(track.get("name"))
+        for segment in track.get("segments", [])
+    ]
     style_flags = sorted({m.get("check_flag") for m in sub_mats if "check_flag" in m})
     subtitle_font_ids = sorted({m.get("font_resource_id") for m in sub_mats if m.get("font_resource_id")})
 
